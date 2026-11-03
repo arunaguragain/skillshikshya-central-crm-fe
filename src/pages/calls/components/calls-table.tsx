@@ -11,6 +11,7 @@ interface CallsTableProps {
   isLoading: boolean;
   ordering: string;
   onSort: (field: "call_timestamp" | "duration_seconds") => void;
+  onSelectCall: (call: CallRow) => void;
 }
 
 function SortHeader({
@@ -44,7 +45,7 @@ function SortHeader({
   );
 }
 
-export function CallsTable({ rows, isLoading, ordering, onSort }: CallsTableProps) {
+export function CallsTable({ rows, isLoading, ordering, onSort, onSelectCall }: CallsTableProps) {
   return (
     <div className="overflow-x-auto">
       <Table className="min-w-[1050px]">
@@ -70,13 +71,28 @@ export function CallsTable({ rows, isLoading, ordering, onSort }: CallsTableProp
               </TableRow>
             ))}
           {!isLoading && rows.map((call) => (
-            <TableRow key={call.id}>
+            <TableRow
+              key={call.id}
+              tabIndex={0}
+              role="button"
+              aria-label={`View call by ${call.created_by_name || "unknown caller"} with ${call.lead_name}`}
+              className="cursor-pointer focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none"
+              onClick={() => onSelectCall(call)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectCall(call);
+                }
+              }}
+            >
               <TableCell className="whitespace-nowrap">{formatDateTime(call.call_timestamp)}</TableCell>
               <TableCell className="capitalize">{call.direction}</TableCell>
               <TableCell>
                 <Link
                   to={`/leads/${call.lead}`}
                   className="font-medium text-brand hover:underline"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
                 >
                   {call.lead_name}
                 </Link>
@@ -97,6 +113,8 @@ export function CallsTable({ rows, isLoading, ordering, onSort }: CallsTableProp
                     target="_blank"
                     rel="noreferrer"
                     className="text-brand hover:underline"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
                   >
                     Listen
                   </a>

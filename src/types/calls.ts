@@ -5,7 +5,7 @@ export interface CallRow {
   lead_reference_number: string | null;
   call_timestamp: string;
   direction: "inbound" | "outbound";
-  caller: number | null;
+  caller: string;
   phone_number: string | null;
   duration_seconds: number | null;
   duration_formatted: string;

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Download, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import type { CallsFilterParams } from "@/types/calls";
 import { CallFilters, type CallDateRange } from "./components/call-filters";
 import { CallsSummaryOverview } from "./components/calls-summary";
 import { CallsTable } from "./components/calls-table";
+import { CallDetailSheet } from "./components/call-detail-sheet";
+import type { CallRow } from "@/types/calls";
 
 const PAGE_SIZE = 20;
 const DEFAULT_ORDERING = "-call_timestamp";
@@ -66,6 +68,7 @@ function getDateBounds(range: CallDateRange, from: string, to: string) {
 
 export default function CallsPage() {
   const { user } = useAuth();
+  const [selectedCall, setSelectedCall] = useState<CallRow | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get("search") ?? "";
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -195,7 +198,13 @@ export default function CallsPage() {
         )}
 
         {initialLoading ? (
-          <CallsTable rows={[]} isLoading ordering={ordering} onSort={updateSort} />
+          <CallsTable
+            rows={[]}
+            isLoading
+            ordering={ordering}
+            onSort={updateSort}
+            onSelectCall={setSelectedCall}
+          />
         ) : calls.isError && !calls.data ? (
           <div className="text-muted-foreground flex flex-col items-center gap-3 py-14 text-center text-sm">
             <p>Could not load calls. Please try again.</p>
@@ -213,7 +222,13 @@ export default function CallsPage() {
             )}
           </div>
         ) : (
-          <CallsTable rows={rows} isLoading={false} ordering={ordering} onSort={updateSort} />
+          <CallsTable
+            rows={rows}
+            isLoading={false}
+            ordering={ordering}
+            onSort={updateSort}
+            onSelectCall={setSelectedCall}
+          />
         )}
       </div>
 
@@ -242,6 +257,7 @@ export default function CallsPage() {
           </Button>
         </div>
       </div>
+      <CallDetailSheet call={selectedCall} onClose={() => setSelectedCall(null)} />
     </div>
   );
 }
