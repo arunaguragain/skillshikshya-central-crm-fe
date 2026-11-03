@@ -1,11 +1,13 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Download, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
-import { useCalls, useCallSummary } from "@/hooks/use-calls";
+import { useCallSummary, useCalls, useExportCalls } from "@/hooks/use-calls";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import type { CallsFilterParams } from "@/types/calls";
 import { CallFilters, type CallDateRange } from "./components/call-filters";
+import { CallsSummaryOverview } from "./components/calls-summary";
 import { CallsTable } from "./components/calls-table";
 
 const PAGE_SIZE = 20;
@@ -86,7 +88,10 @@ export default function CallsPage() {
   const page = positiveInteger(searchParams.get("page"), 1);
   const showBranch = Boolean(user?.is_staff || user?.is_superuser);
 
-  const bounds = getDateBounds(dateRange, dateFrom, dateTo);
+  const bounds = useMemo(
+    () => getDateBounds(dateRange, dateFrom, dateTo),
+    [dateRange, dateFrom, dateTo],
+  );
   const callFilters = useMemo<CallsFilterParams>(
     () => ({
       ...(debouncedSearch.trim() ? { search: debouncedSearch.trim() } : {}),
@@ -100,7 +105,8 @@ export default function CallsPage() {
   );
   const calls = useCalls({ ...callFilters, ordering, page, page_size: PAGE_SIZE });
   // Summary cards will be added here; they share the list's exact filter object.
-  useCallSummary(callFilters);
+  const summary = useCallSummary(callFilters);
+  const exportCalls = useExportCalls();
 
   function updateParams(changes: Record<string, string | null>, resetPage = true) {
     const next = new URLSearchParams(searchParams);
@@ -134,12 +140,27 @@ export default function CallsPage() {
 
   return (
     <div className="min-w-0 space-y-6">
-      <div>
-        <p className="text-brand font-mono text-[11px] font-bold tracking-wider uppercase">
-          CRM Workspace
-        </p>
-        <h1 className="font-headline mt-1 text-3xl font-semibold tracking-tight">Calls</h1>
-        <p className="text-muted-foreground mt-1 text-sm">Global call log across all leads.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-brand font-mono text-[11px] font-bold tracking-wider uppercase">
+            CRM Workspace
+          </p>
+          <h1 className="font-headline mt-1 text-3xl font-semibold tracking-tight">Calls</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Global call log across all leads.</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={exportCalls.isPending}
+          onClick={() => exportCalls.mutate({ ...callFilters, ordering })}
+        >
+          {exportCalls.isPending ? (
+            <LoaderCircle className="animate-spin" />
+          ) : (
+            <Download />
+          )}
+          {exportCalls.isPending ? "Preparing CSV…" : "Export CSV"}
+        </Button>
       </div>
 
       <CallFilters
@@ -160,6 +181,8 @@ export default function CallsPage() {
         onDateToChange={(value) => updateParams({ range: "custom", to: value || null })}
         onClear={clearFilters}
       />
+
+      <CallsSummaryOverview summary={summary.data} isLoading={summary.isLoading} />
 
       <div className="bg-card min-w-0 overflow-hidden rounded-2xl border shadow-[0_1px_3px_0_rgba(0,0,0,0.05),0_1px_2px_-1px_rgba(0,0,0,0.05)]">
         {calls.isError && calls.data && (

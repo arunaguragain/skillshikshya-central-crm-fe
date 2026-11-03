@@ -60,7 +60,7 @@ export interface CallsSummary {
     seconds: number;
   }>;
   by_user: Array<{
-    user_id: number;
+    user_id: number | null;
     name: string;
     calls: number;
     seconds: number;
